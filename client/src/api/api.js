@@ -26,3 +26,10 @@ export const createCategory = (data) => api.post('/categories', data);
 export const getBudgets = (params) => api.get('/budgets', { params });
 export const createBudget = (data) => api.post('/budgets', data);
 export const deleteBudget = (id) => api.delete(`/budgets/${id}`);
+
+// Loans
+export const getLoans = (params) => api.get('/loans', { params });
+export const createLoan = (data) => api.post('/loans', data);
+export const updateLoan = (id, data) => api.put(`/loans/${id}`, data);
+export const payOffLoan = (id) => api.patch(`/loans/${id}/pay-off`);
+export const deleteLoan = (id) => api.delete(`/loans/${id}`);

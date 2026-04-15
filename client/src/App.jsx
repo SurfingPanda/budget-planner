@@ -9,6 +9,7 @@ import Dashboard from './pages/Dashboard';
 import Transactions from './pages/Transactions';
 import Budgets from './pages/Budgets';
 import Accounts from './pages/Accounts';
+import Loans from './pages/Loans';
 
 function AppLayout() {
   return (
@@ -20,6 +21,7 @@ function AppLayout() {
           <Route path="/transactions" element={<Transactions />} />
           <Route path="/budgets" element={<Budgets />} />
           <Route path="/accounts" element={<Accounts />} />
+          <Route path="/loans" element={<Loans />} />
         </Routes>
       </main>
     </div>
