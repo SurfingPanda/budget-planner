@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-require('dotenv').config();
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const app = express();
 
@@ -21,12 +21,18 @@ app.get('/api/health', (req, res) => {
 });
 
 // Serve React frontend
-const clientDist = path.join(__dirname, '../client/dist');
+const clientDist = path.join(__dirname, '..', 'client', 'dist');
+console.log('Serving static files from:', clientDist);
 app.use(express.static(clientDist));
 
 // All non-API routes return index.html (React Router)
 app.get('*', (req, res) => {
-  res.sendFile(path.join(clientDist, 'index.html'));
+  res.sendFile(path.join(clientDist, 'index.html'), (err) => {
+    if (err) {
+      console.error('sendFile error:', err.message, '| path:', clientDist);
+      res.status(500).send('Frontend not found. Path: ' + clientDist);
+    }
+  });
 });
 
 const PORT = process.env.PORT || 5000;
