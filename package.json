@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "main": "server/server.js",
   "scripts": {
+    "build": "cd client && npm install && npm run build",
     "start": "cd server && npm install && node server.js",
     "install:all": "cd server && npm install && cd ../client && npm install",
     "dev:server": "cd server && npm run dev",
-    "dev:client": "cd client && npm run dev",
-    "start:server": "cd server && npm start"
+    "dev:client": "cd client && npm run dev"
   }
 }
