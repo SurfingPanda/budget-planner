@@ -26,6 +26,7 @@ export default function Login() {
 
   const [form, setForm]           = useState({ email: '', password: '' });
   const [showPw, setShowPw]       = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading]     = useState(false);
   const [error, setError]         = useState('');
   const [transitioning, setTransitioning] = useState(false);
@@ -41,7 +42,7 @@ export default function Login() {
     setLoading(true);
     try {
       const res = await axios.post('/api/auth/login', form);
-      login(res.data.token, res.data.user);
+      login(res.data.token, res.data.user, rememberMe);
       setLoggedInUser(res.data.user);
       setTransitioning(true); // show the animated overlay
     } catch (err) {
@@ -208,7 +209,12 @@ export default function Login() {
 
             {/* remember me */}
             <label className="flex items-center gap-2 cursor-pointer select-none">
-              <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              />
               <span className="text-sm text-gray-600">Remember me for 7 days</span>
             </label>
 
