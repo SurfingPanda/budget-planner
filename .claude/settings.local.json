@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(C:/xampp/mysql/bin/mysql.exe:*)",
+      "Bash(node -e ' *)",
+      "Bash(curl -s http://localhost:5000/api/health)",
+      "Bash(curl -s http://localhost:5000/api/accounts)",
+      "Bash(curl -s \"http://localhost:5000/api/transactions/summary?month=4&year=2026\")",
+      "Bash(curl -s \"http://localhost:5000/api/transactions/monthly-chart\")",
+      "Bash(curl -s \"http://localhost:5000/api/transactions/by-category?month=4&year=2026\")",
+      "Bash(curl -s \"http://localhost:5000/api/transactions/daily-chart?month=4&year=2026\")",
+      "Bash(curl -s \"http://localhost:5000/api/budgets?month=4&year=2026\")",
+      "Bash(curl -s \"http://localhost:5000/api/transactions?month=4&year=2026&limit=8\")",
+      "Bash(curl -s \"http://localhost:5000/api/accounts\")"
+    ]
+  }
+}
