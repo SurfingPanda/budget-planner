@@ -3,8 +3,8 @@ node_modules/
 client/node_modules/
 server/node_modules/
 
-# Build output
-client/dist/
+# Build output (committed for Railway deployment)
+# client/dist/
 
 # Environment variables
 .env
