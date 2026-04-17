@@ -17,16 +17,16 @@ export default function SummaryCard({ title, amount, icon, color, subtitle }) {
     : amount;
 
   return (
-    <div className="card flex items-center gap-4 hover:shadow-md transition-shadow duration-200">
-      <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${bgMap[color] || bgMap.indigo}`}>
+    <div className="card flex items-center gap-3 hover:shadow-md transition-shadow duration-200 p-3 sm:p-5">
+      <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${bgMap[color] || bgMap.indigo}`}>
         {icon}
       </div>
       <div className="min-w-0">
-        <p className="text-sm text-gray-500 font-medium">{title}</p>
-        <p className={`text-2xl font-bold truncate ${textMap[color] || 'text-gray-900'}`}>
+        <p className="text-xs sm:text-sm text-gray-500 font-medium leading-tight">{title}</p>
+        <p className={`text-lg sm:text-2xl font-bold truncate ${textMap[color] || 'text-gray-900'}`}>
           {displayAmount}
         </p>
-        {subtitle && <p className="text-xs text-gray-400 mt-0.5">{subtitle}</p>}
+        {subtitle && <p className="text-xs text-gray-400 mt-0.5 hidden sm:block">{subtitle}</p>}
       </div>
     </div>
   );

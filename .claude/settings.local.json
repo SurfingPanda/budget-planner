@@ -13,7 +13,9 @@
       "Bash(curl -s \"http://localhost:5000/api/budgets?month=4&year=2026\")",
       "Bash(curl -s \"http://localhost:5000/api/transactions?month=4&year=2026&limit=8\")",
       "Bash(curl -s \"http://localhost:5000/api/accounts\")",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(mysql -u root -e \"CREATE DATABASE IF NOT EXISTS budget_planner;\")",
+      "Bash(mysql -u root budget_planner)"
     ]
   }
 }

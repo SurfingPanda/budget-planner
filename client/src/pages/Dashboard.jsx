@@ -154,6 +154,8 @@ export default function Dashboard() {
     ? Math.max(0, ((summary.total_income - summary.total_expense) / summary.total_income) * 100).toFixed(0)
     : 0;
 
+  const totalAccountsBalance = accounts.reduce((sum, a) => sum + parseFloat(a.current_balance || 0), 0);
+
   /* build cumulative net savings trend */
   const netTrend = chartData.map((d, i) => ({
     name: d.name,
@@ -196,7 +198,7 @@ export default function Dashboard() {
       )}
 
       {/* ── Summary Cards ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         <SummaryCard
           title="Net Balance"
           amount={summary.balance}
@@ -243,6 +245,18 @@ export default function Dashboard() {
             </svg>
           }
         />
+        <SummaryCard
+          title="Accounts Balance"
+          amount={totalAccountsBalance}
+          color={totalAccountsBalance >= 0 ? 'green' : 'red'}
+          subtitle="Net across all accounts"
+          icon={
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+            </svg>
+          }
+        />
       </div>
 
       {/* ── Smart Insights & Alerts ── */}
@@ -256,9 +270,9 @@ export default function Dashboard() {
       />
 
       {/* ── Row 1: Income vs Expenses bar + Category donut ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
-        <div className="card lg:col-span-2">
+        <div className="card md:col-span-2">
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-base font-semibold text-gray-900">Income vs Expenses</h2>
             <span className="text-xs text-gray-400 font-medium">Last 6 months</span>
@@ -330,10 +344,10 @@ export default function Dashboard() {
       </div>
 
       {/* ── Row 2: Daily spending area + Account balances ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
         {/* Daily spending area chart */}
-        <div className="card lg:col-span-2">
+        <div className="card md:col-span-2">
           <div className="flex items-center justify-between mb-5">
             <div>
               <h2 className="text-base font-semibold text-gray-900">Daily Activity</h2>
@@ -425,10 +439,10 @@ export default function Dashboard() {
       </div>
 
       {/* ── Row 3: Net Savings Trend + Top Categories ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
         {/* Monthly net savings trend */}
-        <div className="card lg:col-span-2">
+        <div className="card md:col-span-2">
           <div className="flex items-center justify-between mb-5">
             <div>
               <h2 className="text-base font-semibold text-gray-900">Monthly Net Savings</h2>

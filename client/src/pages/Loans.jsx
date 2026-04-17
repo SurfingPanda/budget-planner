@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getLoans, createLoan, updateLoan, payOffLoan, deleteLoan } from '../api/api';
+import { getLoans, createLoan, updateLoan, payOffLoan, payMonthLoan, deleteLoan } from '../api/api';
 import ConfirmDialog from '../components/ConfirmDialog';
 
 function formatCurrency(n) {
@@ -203,7 +203,7 @@ function LoanModal({ loan, onClose, onSaved }) {
 }
 
 /* ── Loan Card ── */
-function LoanCard({ loan, onEdit, onPayOff, onDelete }) {
+function LoanCard({ loan, onEdit, onPayMonth, onPayOff, onDelete }) {
   const isBorrowed = loan.type === 'borrowed';
   const principal  = parseFloat(loan.principal_amount);
   const remaining  = parseFloat(loan.remaining_balance);
@@ -236,7 +236,7 @@ function LoanCard({ loan, onEdit, onPayOff, onDelete }) {
                 {isPaidOff && (
                   <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">Paid Off</span>
                 )}
-                {loan.is_recurring && !isPaidOff && (
+                {!!loan.is_recurring && !isPaidOff && (
                   <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
                     Recurring · {ORDINAL(loan.payment_day)} of month
                   </span>
@@ -247,9 +247,19 @@ function LoanCard({ loan, onEdit, onPayOff, onDelete }) {
 
           {/* Actions */}
           <div className="flex items-center gap-1">
+            {!isPaidOff && !!loan.is_recurring && loan.monthly_payment && (
+              <button onClick={() => onPayMonth(loan)}
+                title="Record this month's payment"
+                className="p-1.5 rounded-lg text-indigo-600 hover:bg-indigo-50 transition-colors">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </button>
+            )}
             {!isPaidOff && (
               <button onClick={() => onPayOff(loan)}
-                title="Mark as paid off"
+                title="Mark as fully paid off"
                 className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 transition-colors">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -285,7 +295,7 @@ function LoanCard({ loan, onEdit, onPayOff, onDelete }) {
               {formatCurrency(remaining)}
             </p>
           </div>
-          {loan.is_recurring && loan.monthly_payment && (
+          {!!loan.is_recurring && loan.monthly_payment && (
             <div>
               <p className="text-xs text-gray-400 mb-0.5">Monthly</p>
               <p className="text-sm font-bold text-indigo-600">{formatCurrency(loan.monthly_payment)}</p>
@@ -342,6 +352,18 @@ export default function Loans() {
 
   useEffect(() => { load(); }, [load]);
 
+  const handlePayMonth = (loan) => {
+    setConfirm({
+      title: 'Record Monthly Payment?',
+      message: `Deduct ${formatCurrency(loan.monthly_payment)} from "${loan.name}"'s remaining balance.`,
+      onConfirm: async () => {
+        await payMonthLoan(loan.id);
+        setConfirm(null);
+        load();
+      },
+    });
+  };
+
   const handlePayOff = (loan) => {
     setConfirm({
       title: 'Mark as Paid Off?',
@@ -377,7 +399,7 @@ export default function Loans() {
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Loans</h1>
           <p className="text-sm text-gray-500 mt-0.5">Track money borrowed and lent</p>
@@ -459,12 +481,13 @@ export default function Loans() {
           <p className="text-xs mt-1">Add a loan to start tracking</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {loans.map((loan) => (
             <LoanCard
               key={loan.id}
               loan={loan}
               onEdit={(l) => { setEditLoan(l); setShowModal(true); }}
+              onPayMonth={handlePayMonth}
               onPayOff={handlePayOff}
               onDelete={handleDelete}
             />

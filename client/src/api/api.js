@@ -32,4 +32,5 @@ export const getLoans = (params) => api.get('/loans', { params });
 export const createLoan = (data) => api.post('/loans', data);
 export const updateLoan = (id, data) => api.put(`/loans/${id}`, data);
 export const payOffLoan = (id) => api.patch(`/loans/${id}/pay-off`);
+export const payMonthLoan = (id) => api.patch(`/loans/${id}/pay-month`);
 export const deleteLoan = (id) => api.delete(`/loans/${id}`);

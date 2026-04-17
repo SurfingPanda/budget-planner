@@ -117,6 +117,25 @@ router.patch('/:id/pay-off', async (req, res) => {
   }
 });
 
+// PATCH make a monthly payment (deducts monthly_payment from remaining_balance)
+router.patch('/:id/pay-month', async (req, res) => {
+  try {
+    const [rows] = await db.query('SELECT * FROM loans WHERE id = ?', [req.params.id]);
+    if (!rows.length) return res.status(404).json({ error: 'Loan not found' });
+    const loan = rows[0];
+    const newBalance = Math.max(0, parseFloat(loan.remaining_balance) - parseFloat(loan.monthly_payment));
+    const newStatus = newBalance <= 0 ? 'paid_off' : 'active';
+    await db.query(
+      'UPDATE loans SET remaining_balance = ?, status = ? WHERE id = ?',
+      [newBalance, newStatus, req.params.id]
+    );
+    const [updated] = await db.query('SELECT * FROM loans WHERE id = ?', [req.params.id]);
+    res.json(updated[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // DELETE loan
 router.delete('/:id', async (req, res) => {
   try {
