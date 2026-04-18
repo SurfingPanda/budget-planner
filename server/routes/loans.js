@@ -34,7 +34,7 @@ router.post('/', async (req, res) => {
     const {
       name, type, principal_amount, remaining_balance,
       monthly_payment, is_recurring, payment_day,
-      start_date, due_date, notes,
+      start_date, due_date, notes, account_id,
     } = req.body;
 
     if (!name || !type || !principal_amount || !start_date) {
@@ -44,8 +44,8 @@ router.post('/', async (req, res) => {
     const [result] = await db.query(
       `INSERT INTO loans
         (name, type, principal_amount, remaining_balance, monthly_payment,
-         is_recurring, payment_day, start_date, due_date, notes, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`,
+         is_recurring, payment_day, start_date, due_date, notes, status, account_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?)`,
       [
         name.trim(), type,
         parseFloat(principal_amount),
@@ -56,6 +56,7 @@ router.post('/', async (req, res) => {
         start_date,
         due_date || null,
         notes || null,
+        account_id ? parseInt(account_id) : null,
       ]
     );
 
@@ -72,14 +73,14 @@ router.put('/:id', async (req, res) => {
     const {
       name, type, principal_amount, remaining_balance,
       monthly_payment, is_recurring, payment_day,
-      start_date, due_date, notes, status,
+      start_date, due_date, notes, status, account_id,
     } = req.body;
 
     await db.query(
       `UPDATE loans SET
         name=?, type=?, principal_amount=?, remaining_balance=?,
         monthly_payment=?, is_recurring=?, payment_day=?,
-        start_date=?, due_date=?, notes=?, status=?
+        start_date=?, due_date=?, notes=?, status=?, account_id=?
        WHERE id=?`,
       [
         name.trim(), type,
@@ -92,6 +93,7 @@ router.put('/:id', async (req, res) => {
         due_date || null,
         notes || null,
         status || 'active',
+        account_id ? parseInt(account_id) : null,
         req.params.id,
       ]
     );
@@ -106,12 +108,32 @@ router.put('/:id', async (req, res) => {
 // PATCH mark as paid off
 router.patch('/:id/pay-off', async (req, res) => {
   try {
+    const [rows] = await db.query('SELECT * FROM loans WHERE id = ?', [req.params.id]);
+    if (!rows.length) return res.status(404).json({ error: 'Loan not found' });
+    const loan = rows[0];
+    const payAmount = parseFloat(loan.remaining_balance);
+
     await db.query(
       "UPDATE loans SET status='paid_off', remaining_balance=0 WHERE id=?",
       [req.params.id]
     );
-    const [rows] = await db.query('SELECT * FROM loans WHERE id = ?', [req.params.id]);
-    res.json(rows[0]);
+
+    // Reflect payment back to linked account as income
+    if (loan.account_id && payAmount > 0) {
+      await db.query(
+        `INSERT INTO transactions (title, amount, type, account_id, date, description)
+         VALUES (?, ?, 'income', ?, CURDATE(), ?)`,
+        [
+          `Loan paid off — ${loan.name}`,
+          payAmount,
+          loan.account_id,
+          `Full pay-off of loan: ${loan.name}`,
+        ]
+      );
+    }
+
+    const [updated] = await db.query('SELECT * FROM loans WHERE id = ?', [req.params.id]);
+    res.json(updated[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -123,12 +145,29 @@ router.patch('/:id/pay-month', async (req, res) => {
     const [rows] = await db.query('SELECT * FROM loans WHERE id = ?', [req.params.id]);
     if (!rows.length) return res.status(404).json({ error: 'Loan not found' });
     const loan = rows[0];
-    const newBalance = Math.max(0, parseFloat(loan.remaining_balance) - parseFloat(loan.monthly_payment));
+    const payAmount = parseFloat(loan.monthly_payment);
+    const newBalance = Math.max(0, parseFloat(loan.remaining_balance) - payAmount);
     const newStatus = newBalance <= 0 ? 'paid_off' : 'active';
+
     await db.query(
       'UPDATE loans SET remaining_balance = ?, status = ? WHERE id = ?',
       [newBalance, newStatus, req.params.id]
     );
+
+    // Reflect payment back to linked account as income
+    if (loan.account_id && payAmount > 0) {
+      await db.query(
+        `INSERT INTO transactions (title, amount, type, account_id, date, description)
+         VALUES (?, ?, 'income', ?, CURDATE(), ?)`,
+        [
+          `Loan payment — ${loan.name}`,
+          payAmount,
+          loan.account_id,
+          `Monthly payment for loan: ${loan.name}`,
+        ]
+      );
+    }
+
     const [updated] = await db.query('SELECT * FROM loans WHERE id = ?', [req.params.id]);
     res.json(updated[0]);
   } catch (err) {

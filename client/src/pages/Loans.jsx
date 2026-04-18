@@ -1,7 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getLoans, createLoan, updateLoan, payOffLoan, payMonthLoan, deleteLoan } from '../api/api';
+import { getLoans, createLoan, updateLoan, payOffLoan, payMonthLoan, deleteLoan, getAccounts } from '../api/api';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { useCurrency } from '../context/CurrencyContext';
+
+const ACCOUNT_ICONS = {
+  cash:          'M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z',
+  bank:          'M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z',
+  'e-wallet':    'M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z',
+  'credit-card': 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z',
+  savings:       'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+  investment:    'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6',
+  other:         'M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z',
+};
 
 function formatDate(d) {
   if (!d) return '—';
@@ -58,13 +68,19 @@ function LoanModal({ loan, onClose, onSaved }) {
     due_date:          loan?.due_date   ? loan.due_date.slice(0, 10)   : '',
     notes:             loan?.notes             || '',
     status:            loan?.status            || 'active',
+    account_id:        loan?.account_id        || '',
   });
-  const [saving, setSaving] = useState(false);
-  const [error, setError]   = useState('');
+  const [saving, setSaving]     = useState(false);
+  const [error, setError]       = useState('');
+  const [accounts, setAccounts] = useState([]);
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = ''; };
+  }, []);
+
+  useEffect(() => {
+    getAccounts().then((res) => setAccounts(res.data)).catch(() => {});
   }, []);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
@@ -94,7 +110,7 @@ function LoanModal({ loan, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 z-[60] overflow-y-auto bg-black/40 backdrop-blur-sm">
       <div className="flex min-h-full items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg">
         <div className="h-1.5 bg-gradient-to-r from-violet-500 to-indigo-500 rounded-t-2xl" />
         <div className="p-6">
           <div className="flex items-center justify-between mb-5">
@@ -204,6 +220,68 @@ function LoanModal({ loan, onClose, onSaved }) {
               </div>
             </div>
 
+            {/* Linked Account */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Linked Account <span className="text-gray-400">(optional)</span>
+              </label>
+              <p className="text-xs text-gray-400 mb-2">
+                Loan payments will be credited back to this account.
+              </p>
+              {accounts.length === 0 ? (
+                <div className="input w-full bg-gray-50 text-gray-400 text-sm">
+                  No accounts yet — add one in the Accounts page
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  {/* None option */}
+                  <button
+                    type="button"
+                    onClick={() => set('account_id', '')}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-xl border-2 text-sm font-medium transition-all text-left ${
+                      !form.account_id
+                        ? 'border-gray-400 bg-gray-50 text-gray-700'
+                        : 'border-gray-100 text-gray-400 hover:border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    <svg className="w-4 h-4 flex-shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                    </svg>
+                    <div className="min-w-0">
+                      <p className="truncate leading-tight">None</p>
+                      <p className="text-xs text-gray-400 font-normal">No account</p>
+                    </div>
+                  </button>
+
+                  {accounts.map((a) => (
+                    <button
+                      type="button"
+                      key={a.id}
+                      onClick={() => set('account_id', form.account_id == a.id ? '' : a.id)}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-xl border-2 text-sm font-medium transition-all text-left ${
+                        form.account_id == a.id
+                          ? 'border-indigo-400 bg-indigo-50 text-indigo-700'
+                          : 'border-gray-100 text-gray-600 hover:border-gray-200 hover:bg-gray-50'
+                      }`}
+                    >
+                      <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        style={{ color: form.account_id == a.id ? '#6366f1' : a.color || '#9ca3af' }}>
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                          d={ACCOUNT_ICONS[a.type] || ACCOUNT_ICONS.other} />
+                      </svg>
+                      <div className="min-w-0">
+                        <p className="truncate leading-tight">{a.name}</p>
+                        <p className="text-xs text-gray-400 font-normal truncate">
+                          ${parseFloat(a.current_balance ?? a.initial_balance).toLocaleString()}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {/* Notes */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Notes <span className="text-gray-400">(optional)</span></label>
@@ -237,13 +315,14 @@ function LoanModal({ loan, onClose, onSaved }) {
 }
 
 /* ── Loan Card ── */
-function LoanCard({ loan, onEdit, onPayMonth, onPayOff, onDelete }) {
+function LoanCard({ loan, accounts, onEdit, onPayMonth, onPayOff, onDelete }) {
   const { formatCurrency } = useCurrency();
-  const isBorrowed = loan.type === 'borrowed';
-  const principal  = parseFloat(loan.principal_amount);
-  const remaining  = parseFloat(loan.remaining_balance);
-  const paidPct    = principal > 0 ? Math.min(100, ((principal - remaining) / principal) * 100) : 100;
-  const isPaidOff  = loan.status === 'paid_off';
+  const isBorrowed   = loan.type === 'borrowed';
+  const principal    = parseFloat(loan.principal_amount);
+  const remaining    = parseFloat(loan.remaining_balance);
+  const paidPct      = principal > 0 ? Math.min(100, ((principal - remaining) / principal) * 100) : 100;
+  const isPaidOff    = loan.status === 'paid_off';
+  const linkedAccount = loan.account_id && accounts ? accounts.find((a) => a.id === loan.account_id) : null;
 
   return (
     <div className={`card relative overflow-hidden ${isPaidOff ? 'opacity-60' : ''}`}>
@@ -365,10 +444,19 @@ function LoanCard({ loan, onEdit, onPayMonth, onPayOff, onDelete }) {
         </div>
 
         {/* Dates & notes */}
-        <div className="flex items-center gap-4 text-xs text-gray-400">
+        <div className="flex flex-wrap items-center gap-4 text-xs text-gray-400">
           <span>Started {formatDate(loan.start_date)}</span>
           {loan.due_date && <span>Due {formatDate(loan.due_date)}</span>}
           {loan.notes && <span className="truncate italic">"{loan.notes}"</span>}
+          {linkedAccount && (
+            <span className="flex items-center gap-1 text-indigo-400 font-medium">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+              </svg>
+              {linkedAccount.name}
+            </span>
+          )}
         </div>
       </div>
     </div>
@@ -379,6 +467,7 @@ function LoanCard({ loan, onEdit, onPayMonth, onPayOff, onDelete }) {
 export default function Loans() {
   const { formatCurrency } = useCurrency();
   const [loans,      setLoans]      = useState([]);
+  const [accounts,   setAccounts]   = useState([]);
   const [loading,    setLoading]    = useState(true);
   const [showModal,  setShowModal]  = useState(false);
   const [editLoan,   setEditLoan]   = useState(null);
@@ -390,8 +479,9 @@ export default function Loans() {
     setLoading(true);
     try {
       const params = filter !== 'all' ? { status: filter } : {};
-      const res = await getLoans(params);
-      setLoans(res.data);
+      const [loansRes, accountsRes] = await Promise.all([getLoans(params), getAccounts()]);
+      setLoans(loansRes.data);
+      setAccounts(accountsRes.data);
     } catch (e) {
       console.error(e);
     } finally {
@@ -402,9 +492,11 @@ export default function Loans() {
   useEffect(() => { load(); }, [load]);
 
   const handlePayMonth = (loan) => {
+    const linkedAcct = loan.account_id ? accounts.find((a) => a.id === loan.account_id) : null;
+    const acctNote = linkedAcct ? ` The payment will be credited back to ${linkedAcct.name}.` : '';
     setConfirm({
       title: 'Record Monthly Payment?',
-      message: `Deduct ${formatCurrency(loan.monthly_payment)} from "${loan.name}"'s remaining balance.`,
+      message: `Deduct ${formatCurrency(loan.monthly_payment)} from "${loan.name}"'s remaining balance.${acctNote}`,
       onConfirm: async () => {
         await payMonthLoan(loan.id);
         setConfirm(null);
@@ -414,9 +506,11 @@ export default function Loans() {
   };
 
   const handlePayOff = (loan) => {
+    const linkedAcct = loan.account_id ? accounts.find((a) => a.id === loan.account_id) : null;
+    const acctNote = linkedAcct ? ` The remaining balance will be credited back to ${linkedAcct.name}.` : '';
     setConfirm({
       title: 'Mark as Paid Off?',
-      message: `"${loan.name}" will be marked as fully paid off.`,
+      message: `"${loan.name}" will be marked as fully paid off.${acctNote}`,
       onConfirm: async () => {
         await payOffLoan(loan.id);
         setConfirm(null);
@@ -604,6 +698,7 @@ export default function Loans() {
             <LoanCard
               key={loan.id}
               loan={loan}
+              accounts={accounts}
               onEdit={(l) => { setEditLoan(l); setShowModal(true); }}
               onPayMonth={handlePayMonth}
               onPayOff={handlePayOff}
