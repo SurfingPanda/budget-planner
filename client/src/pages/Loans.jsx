@@ -447,9 +447,22 @@ export default function Loans() {
   const displayedLoans = paymentMonth
     ? loans.filter((l) => {
         if (!l.is_recurring || !l.payment_day) return false;
-        const next = getNextPaymentDate(l.payment_day);
-        const ym = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`;
-        return ym === paymentMonth;
+        // Parse selected month as a Date (first day of that month)
+        const [selYear, selMonth] = paymentMonth.split('-').map(Number);
+        const selDate = new Date(selYear, selMonth - 1, 1);
+        // Loan must have started on or before the end of the selected month
+        const startDate = l.start_date ? new Date(l.start_date) : null;
+        if (startDate) {
+          const startYM = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+          if (startYM > selDate) return false; // loan hasn't started yet this month
+        }
+        // Loan must not be fully due before the selected month
+        if (l.due_date) {
+          const due = new Date(l.due_date);
+          const dueYM = new Date(due.getFullYear(), due.getMonth(), 1);
+          if (dueYM < selDate) return false; // loan already ended
+        }
+        return true;
       })
     : loans;
 
@@ -542,8 +555,17 @@ export default function Loans() {
             {MONTH_OPTIONS.map((m) => {
               const count = loans.filter((l) => {
                 if (!l.is_recurring || !l.payment_day) return false;
-                const next = getNextPaymentDate(l.payment_day);
-                return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}` === m.value;
+                const [selYear, selMonth] = m.value.split('-').map(Number);
+                const selDate = new Date(selYear, selMonth - 1, 1);
+                if (l.start_date) {
+                  const s = new Date(l.start_date);
+                  if (new Date(s.getFullYear(), s.getMonth(), 1) > selDate) return false;
+                }
+                if (l.due_date) {
+                  const d = new Date(l.due_date);
+                  if (new Date(d.getFullYear(), d.getMonth(), 1) < selDate) return false;
+                }
+                return true;
               }).length;
               return (
                 <option key={m.value} value={m.value}>
