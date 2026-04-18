@@ -2,16 +2,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { getBudgets, deleteBudget } from '../api/api';
 import BudgetModal from '../components/BudgetModal';
 import ConfirmDialog from '../components/ConfirmDialog';
+import { useCurrency } from '../context/CurrencyContext';
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
 const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-
-function formatCurrency(n) {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
-}
 
 function getWeekRanges(month, year) {
   const daysInMonth = new Date(year, month, 0).getDate();
@@ -28,6 +25,7 @@ function getWeekRanges(month, year) {
 
 /* ── BudgetCard ── */
 function BudgetCard({ budget, onDelete, periodType, week, month, year }) {
+  const { formatCurrency } = useCurrency();
   const spent = parseFloat(budget.spent) || 0;
   const limit = parseFloat(budget.amount);
   const pct   = limit > 0 ? Math.min((spent / limit) * 100, 100) : 0;
@@ -104,6 +102,7 @@ function BudgetCard({ budget, onDelete, periodType, week, month, year }) {
 
 /* ── Page ── */
 export default function Budgets() {
+  const { formatCurrency } = useCurrency();
   const now = new Date();
   const [month,      setMonth]      = useState(now.getMonth() + 1);
   const [year,       setYear]       = useState(now.getFullYear());

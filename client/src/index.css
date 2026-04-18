@@ -101,3 +101,53 @@
   from { opacity: 0; }
   to   { opacity: 1; }
 }
+
+/* ── Landing → Login/Register transition ── */
+.landing-ripple-overlay {
+  animation: landingRippleIn 0.08s ease forwards;
+}
+@keyframes landingRippleIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.landing-ripple-circle {
+  animation: landingRippleExpand 0.72s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+@keyframes landingRippleExpand {
+  from { transform: translate(-50%, -50%) scale(0); opacity: 1; }
+  to   { transform: translate(-50%, -50%) scale(100); opacity: 1; }
+}
+
+.landing-ripple-logo {
+  animation: rippleLogoPop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) 0.38s both;
+}
+@keyframes rippleLogoPop {
+  from { opacity: 0; transform: scale(0.4) rotate(-12deg); }
+  to   { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+
+.landing-ripple-text {
+  animation: rippleTextUp 0.4s ease 0.52s both;
+}
+@keyframes rippleTextUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.landing-ripple-coins {
+  animation: rippleCoinFloat 1.6s ease-in-out infinite alternate;
+}
+@keyframes rippleCoinFloat {
+  from { transform: translateY(0px) rotate(0deg); }
+  to   { transform: translateY(-14px) rotate(8deg); }
+}
+
+/* Auth page slide-in from right */
+.auth-page-enter {
+  animation: authPageSlideIn 0.45s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+@keyframes authPageSlideIn {
+  from { opacity: 0; transform: translateX(32px); }
+  to   { opacity: 1; transform: translateX(0); }
+}

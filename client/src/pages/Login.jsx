@@ -60,7 +60,7 @@ export default function Login() {
     {transitioning && (
       <LoginTransition userName={loggedInUser?.name} onDone={handleTransitionDone} />
     )}
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex auth-page-enter">
 
       {/* ── Left panel – branding ── */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 flex-col justify-between p-12 relative overflow-hidden">

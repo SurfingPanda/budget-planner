@@ -12,47 +12,46 @@ import SummaryCard from '../components/SummaryCard';
 import TransactionList from '../components/TransactionList';
 import TransactionModal from '../components/TransactionModal';
 import InsightsPanel from '../components/InsightsPanel';
+import { useCurrency } from '../context/CurrencyContext';
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-function formatCurrency(n) {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n);
+/* ── shared tooltips — rendered inside component so they can use the hook ── */
+function useTooltips() {
+  const { formatCurrency, formatCurrencyInt } = useCurrency();
+
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (!active || !payload?.length) return null;
+    return (
+      <div className="bg-white border border-gray-200 rounded-xl shadow-lg p-3 text-sm">
+        <p className="font-semibold text-gray-700 mb-2">{label}</p>
+        {payload.map((p) => (
+          <div key={p.name} className="flex items-center gap-2">
+            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.color }} />
+            <p style={{ color: p.color }} className="font-medium">
+              {p.name}: {formatCurrency(p.value)}
+            </p>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const NetTooltip = ({ active, payload, label }) => {
+    if (!active || !payload?.length) return null;
+    const val = payload[0]?.value ?? 0;
+    return (
+      <div className="bg-white border border-gray-200 rounded-xl shadow-lg p-3 text-sm">
+        <p className="font-semibold text-gray-700 mb-1">{label}</p>
+        <p className={`font-bold ${val >= 0 ? 'text-indigo-600' : 'text-red-500'}`}>
+          Net: {formatCurrency(val)}
+        </p>
+      </div>
+    );
+  };
+
+  return { CustomTooltip, NetTooltip, formatCurrency, formatCurrencyInt };
 }
-
-function formatCurrencyFull(n) {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
-}
-
-/* ── shared tooltip ── */
-const CustomTooltip = ({ active, payload, label }) => {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="bg-white border border-gray-200 rounded-xl shadow-lg p-3 text-sm">
-      <p className="font-semibold text-gray-700 mb-2">{label}</p>
-      {payload.map((p) => (
-        <div key={p.name} className="flex items-center gap-2">
-          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.color }} />
-          <p style={{ color: p.color }} className="font-medium">
-            {p.name}: {formatCurrencyFull(p.value)}
-          </p>
-        </div>
-      ))}
-    </div>
-  );
-};
-
-const NetTooltip = ({ active, payload, label }) => {
-  if (!active || !payload?.length) return null;
-  const val = payload[0]?.value ?? 0;
-  return (
-    <div className="bg-white border border-gray-200 rounded-xl shadow-lg p-3 text-sm">
-      <p className="font-semibold text-gray-700 mb-1">{label}</p>
-      <p className={`font-bold ${val >= 0 ? 'text-indigo-600' : 'text-red-500'}`}>
-        Net: {formatCurrencyFull(val)}
-      </p>
-    </div>
-  );
-};
 
 /* ── empty state ── */
 function EmptyChart({ message = 'No data yet', hint = 'Add a transaction to get started' }) {
@@ -69,6 +68,7 @@ function EmptyChart({ message = 'No data yet', hint = 'Add a transaction to get 
 }
 
 export default function Dashboard() {
+  const { CustomTooltip, NetTooltip, formatCurrency, formatCurrencyInt } = useTooltips();
   const now = new Date();
   const [month] = useState(now.getMonth() + 1);
   const [year]  = useState(now.getFullYear());
@@ -319,7 +319,7 @@ export default function Dashboard() {
                       <Cell key={i} fill={entry.color || `hsl(${i * 45}, 70%, 60%)`} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(v) => formatCurrencyFull(v)} />
+                  <Tooltip formatter={(v) => formatCurrency(v)} />
                 </PieChart>
               </ResponsiveContainer>
               <div className="mt-3 space-y-1.5 max-h-28 overflow-y-auto">
@@ -330,7 +330,7 @@ export default function Dashboard() {
                         style={{ backgroundColor: c.color || `hsl(${i * 45}, 70%, 60%)` }} />
                       <span className="text-gray-600 truncate">{c.name}</span>
                     </div>
-                    <span className="font-semibold text-gray-800 ml-2 flex-shrink-0">{formatCurrency(c.total)}</span>
+                    <span className="font-semibold text-gray-800 ml-2 flex-shrink-0">{formatCurrencyInt(c.total)}</span>
                   </div>
                 ))}
               </div>
@@ -410,7 +410,7 @@ export default function Dashboard() {
                         <span className="text-xs text-gray-400 capitalize hidden sm:inline">{acct.type?.replace('-', ' ')}</span>
                       </div>
                       <span className={`font-bold flex-shrink-0 ml-2 text-xs ${isNeg ? 'text-red-500' : 'text-gray-900'}`}>
-                        {formatCurrency(bal)}
+                        {formatCurrencyInt(bal)}
                       </span>
                     </div>
                     <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
@@ -495,7 +495,7 @@ export default function Dashboard() {
                         <span className="font-medium text-gray-500 w-4 text-center">{i + 1}</span>
                         <span className="text-gray-700 font-medium truncate">{c.name || 'Uncategorized'}</span>
                       </div>
-                      <span className="font-bold text-gray-800 ml-2 flex-shrink-0">{formatCurrency(c.total)}</span>
+                      <span className="font-bold text-gray-800 ml-2 flex-shrink-0">{formatCurrencyInt(c.total)}</span>
                     </div>
                     <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                       <div

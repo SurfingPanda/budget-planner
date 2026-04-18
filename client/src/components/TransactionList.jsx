@@ -2,16 +2,14 @@ import { useState } from 'react';
 import { format } from 'date-fns';
 import { deleteTransaction } from '../api/api';
 import ConfirmDialog from './ConfirmDialog';
-
-function formatCurrency(n) {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
-}
+import { useCurrency } from '../context/CurrencyContext';
 
 function formatDate(d) {
   try { return format(new Date(d), 'MMM d, yyyy'); } catch { return d; }
 }
 
 export default function TransactionList({ transactions, onEdit, onDeleted, loading }) {
+  const { formatCurrency } = useCurrency();
   const [pendingDelete, setPendingDelete] = useState(null); // transaction object
 
   const handleDeleteConfirm = async () => {

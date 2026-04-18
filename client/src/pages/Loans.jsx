@@ -1,10 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getLoans, createLoan, updateLoan, payOffLoan, payMonthLoan, deleteLoan } from '../api/api';
 import ConfirmDialog from '../components/ConfirmDialog';
-
-function formatCurrency(n) {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n || 0);
-}
+import { useCurrency } from '../context/CurrencyContext';
 
 function formatDate(d) {
   if (!d) return '—';
@@ -15,6 +12,36 @@ const ORDINAL = (n) => {
   const s = ['th','st','nd','rd'], v = n % 100;
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 };
+
+function getNextPaymentDate(payment_day) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const day = parseInt(payment_day);
+  let year  = today.getFullYear();
+  let month = today.getMonth();
+  let candidate = new Date(year, month, day);
+  if (candidate < today) {
+    month += 1;
+    candidate = new Date(year, month, day);
+  }
+  return candidate;
+}
+
+function getMonthOptions() {
+  const now = new Date();
+  const months = [];
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+    months.push({
+      value: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+      label: d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+      short: d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+    });
+  }
+  return months;
+}
+
+const MONTH_OPTIONS = getMonthOptions();
 
 /* ── Modal ── */
 function LoanModal({ loan, onClose, onSaved }) {
@@ -34,6 +61,11 @@ function LoanModal({ loan, onClose, onSaved }) {
   });
   const [saving, setSaving] = useState(false);
   const [error, setError]   = useState('');
+
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -60,7 +92,8 @@ function LoanModal({ loan, onClose, onSaved }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[60] overflow-y-auto bg-black/40 backdrop-blur-sm">
+      <div className="flex min-h-full items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden">
         <div className="h-1.5 bg-gradient-to-r from-violet-500 to-indigo-500 rounded-t-2xl" />
         <div className="p-6">
@@ -198,12 +231,14 @@ function LoanModal({ loan, onClose, onSaved }) {
           </form>
         </div>
       </div>
+      </div>
     </div>
   );
 }
 
 /* ── Loan Card ── */
 function LoanCard({ loan, onEdit, onPayMonth, onPayOff, onDelete }) {
+  const { formatCurrency } = useCurrency();
   const isBorrowed = loan.type === 'borrowed';
   const principal  = parseFloat(loan.principal_amount);
   const remaining  = parseFloat(loan.remaining_balance);
@@ -229,18 +264,30 @@ function LoanCard({ loan, onEdit, onPayMonth, onPayOff, onDelete }) {
             </div>
             <div>
               <p className="font-semibold text-gray-900">{loan.name}</p>
-              <div className="flex items-center gap-2 mt-0.5">
-                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${isBorrowed ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}`}>
+              <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                <span className={`whitespace-nowrap text-xs font-medium px-2 py-0.5 rounded-full ${isBorrowed ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}`}>
                   {isBorrowed ? 'Borrowed' : 'Lent'}
                 </span>
                 {isPaidOff && (
-                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">Paid Off</span>
+                  <span className="whitespace-nowrap text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">Paid Off</span>
                 )}
                 {!!loan.is_recurring && !isPaidOff && (
-                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+                  <span className="whitespace-nowrap text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
                     Recurring · {ORDINAL(loan.payment_day)} of month
                   </span>
                 )}
+                {!!loan.is_recurring && !isPaidOff && loan.payment_day && (() => {
+                  const next = getNextPaymentDate(loan.payment_day);
+                  const today = new Date(); today.setHours(0,0,0,0);
+                  const diff = Math.round((next - today) / 86400000);
+                  const label = next.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                  const urgent = diff <= 7;
+                  return (
+                    <span className={`whitespace-nowrap text-xs font-medium px-2 py-0.5 rounded-full ${urgent ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'}`}>
+                      Next: {label}{diff === 0 ? ' · today' : diff === 1 ? ' · tomorrow' : diff <= 7 ? ` · ${diff}d` : ''}
+                    </span>
+                  );
+                })()}
               </div>
             </div>
           </div>
@@ -330,12 +377,14 @@ function LoanCard({ loan, onEdit, onPayMonth, onPayOff, onDelete }) {
 
 /* ── Page ── */
 export default function Loans() {
+  const { formatCurrency } = useCurrency();
   const [loans,      setLoans]      = useState([]);
   const [loading,    setLoading]    = useState(true);
   const [showModal,  setShowModal]  = useState(false);
   const [editLoan,   setEditLoan]   = useState(null);
   const [confirm,    setConfirm]    = useState(null);
-  const [filter,     setFilter]     = useState('active'); // 'all' | 'active' | 'paid_off'
+  const [filter,       setFilter]       = useState('active'); // 'all' | 'active' | 'paid_off'
+  const [paymentMonth, setPaymentMonth] = useState(null);    // null | 'YYYY-MM'
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -390,10 +439,24 @@ export default function Loans() {
   };
 
   /* summary numbers */
-  const active       = loans.filter((l) => l.status === 'active');
-  const totalOwed    = active.filter((l) => l.type === 'borrowed').reduce((s, l) => s + parseFloat(l.remaining_balance), 0);
-  const totalLent    = active.filter((l) => l.type === 'lent').reduce((s, l) => s + parseFloat(l.remaining_balance), 0);
-  const monthlyDue   = active.filter((l) => l.is_recurring && l.monthly_payment).reduce((s, l) => s + parseFloat(l.monthly_payment), 0);
+  const active     = loans.filter((l) => l.status === 'active');
+  const totalOwed  = active.filter((l) => l.type === 'borrowed').reduce((s, l) => s + parseFloat(l.remaining_balance), 0);
+  const totalLent  = active.filter((l) => l.type === 'lent').reduce((s, l) => s + parseFloat(l.remaining_balance), 0);
+
+  /* month-filtered loans for display */
+  const displayedLoans = paymentMonth
+    ? loans.filter((l) => {
+        if (!l.is_recurring || !l.payment_day) return false;
+        const next = getNextPaymentDate(l.payment_day);
+        const ym = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`;
+        return ym === paymentMonth;
+      })
+    : loans;
+
+  /* monthly due — scoped to selected month when filtered */
+  const monthlyDue = paymentMonth
+    ? displayedLoans.filter((l) => l.is_recurring && l.monthly_payment).reduce((s, l) => s + parseFloat(l.monthly_payment), 0)
+    : active.filter((l) => l.is_recurring && l.monthly_payment).reduce((s, l) => s + parseFloat(l.monthly_payment), 0);
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
@@ -444,22 +507,55 @@ export default function Loans() {
             </svg>
           </div>
           <div>
-            <p className="text-xs text-gray-400 font-medium">Monthly Payments Due</p>
+            <p className="text-xs text-gray-400 font-medium">
+              {paymentMonth
+                ? `Payments Due · ${MONTH_OPTIONS.find((m) => m.value === paymentMonth)?.label}`
+                : 'Monthly Payments Due'}
+            </p>
             <p className="text-xl font-bold text-indigo-600">{formatCurrency(monthlyDue)}</p>
           </div>
         </div>
       </div>
 
-      {/* Filter tabs */}
-      <div className="flex gap-2">
-        {[['active','Active'],['all','All'],['paid_off','Paid Off']].map(([val, label]) => (
-          <button key={val} onClick={() => setFilter(val)}
-            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              filter === val ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-            }`}>
-            {label}
-          </button>
-        ))}
+      {/* Filters row */}
+      <div className="flex flex-wrap items-center gap-3">
+        {/* Status tabs */}
+        <div className="flex gap-2">
+          {[['active','Active'],['all','All'],['paid_off','Paid Off']].map(([val, label]) => (
+            <button key={val} onClick={() => setFilter(val)}
+              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                filter === val ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+              }`}>
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Month dropdown */}
+        <div className="relative">
+          <select
+            value={paymentMonth || ''}
+            onChange={(e) => setPaymentMonth(e.target.value || null)}
+            className="appearance-none pl-3 pr-8 py-1.5 rounded-lg text-sm font-medium border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-violet-500 cursor-pointer"
+          >
+            <option value="">All Months</option>
+            {MONTH_OPTIONS.map((m) => {
+              const count = loans.filter((l) => {
+                if (!l.is_recurring || !l.payment_day) return false;
+                const next = getNextPaymentDate(l.payment_day);
+                return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}` === m.value;
+              }).length;
+              return (
+                <option key={m.value} value={m.value}>
+                  {m.label}{count > 0 ? ` (${count} payment${count > 1 ? 's' : ''})` : ''}
+                </option>
+              );
+            })}
+          </select>
+          <svg className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
       </div>
 
       {/* Loan list */}
@@ -471,18 +567,18 @@ export default function Loans() {
           </svg>
           Loading…
         </div>
-      ) : loans.length === 0 ? (
+      ) : displayedLoans.length === 0 ? (
         <div className="card flex flex-col items-center justify-center py-16 text-gray-400">
           <svg className="w-12 h-12 opacity-30 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
               d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <p className="font-medium text-sm">No loans found</p>
-          <p className="text-xs mt-1">Add a loan to start tracking</p>
+          <p className="text-xs mt-1">{paymentMonth ? 'No payments due this month' : 'Add a loan to start tracking'}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {loans.map((loan) => (
+          {displayedLoans.map((loan) => (
             <LoanCard
               key={loan.id}
               loan={loan}

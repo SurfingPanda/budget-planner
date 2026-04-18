@@ -1,5 +1,6 @@
-import { Link } from 'react-router-dom';
-import { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import LandingTransition from '../components/LandingTransition';
 
 /* ── scroll-reveal hook — re-triggers on scroll up too ── */
 function useReveal(threshold = 0.15) {
@@ -224,9 +225,28 @@ function Testimonial({ name, role, quote, avatar }) {
 /* ═══════════════════════════════════════════════ */
 export default function Landing() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [transitioning, setTransitioning] = useState(false);
+  const [transOrigin,   setTransOrigin]   = useState(null);
+  const [transTarget,   setTransTarget]   = useState('/login');
+  const navigate = useNavigate();
+
+  const goTo = useCallback((e, to) => {
+    e.preventDefault();
+    const rect = e.currentTarget.getBoundingClientRect();
+    setTransOrigin({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
+    setTransTarget(to);
+    setTransitioning(true);
+  }, []);
 
   return (
     <div className="min-h-screen bg-white font-sans overflow-x-hidden">
+
+      {transitioning && (
+        <LandingTransition
+          origin={transOrigin}
+          onDone={() => navigate(transTarget)}
+        />
+      )}
 
       {/* ── NAVBAR ── */}
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
@@ -246,13 +266,13 @@ export default function Landing() {
             </nav>
 
             <div className="hidden md:flex items-center gap-3">
-              <Link to="/login" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
+              <button onClick={(e) => goTo(e, '/login')} className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
                 Sign In
-              </Link>
-              <Link to="/register"
+              </button>
+              <button onClick={(e) => goTo(e, '/register')}
                 className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors shadow-sm">
                 Get Started Free
-              </Link>
+              </button>
             </div>
 
             <button className="md:hidden text-gray-500" onClick={() => setMobileOpen(!mobileOpen)}>
@@ -270,11 +290,11 @@ export default function Landing() {
                 {href.replace('#', '').replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
               </a>
             ))}
-            <Link to="/register"
+            <button
               className="block w-full text-center bg-indigo-600 text-white text-sm font-medium px-4 py-2.5 rounded-lg mt-2"
-              onClick={() => setMobileOpen(false)}>
+              onClick={(e) => { setMobileOpen(false); goTo(e, '/register'); }}>
               Get Started Free
-            </Link>
+            </button>
           </div>
         )}
       </header>
@@ -309,11 +329,11 @@ export default function Landing() {
               </p>
 
               <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
-                <Link to="/register"
+                <button onClick={(e) => goTo(e, '/register')}
                   className="flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-3 rounded-xl transition-all shadow-lg shadow-indigo-200 hover:shadow-indigo-300 hover:-translate-y-0.5 duration-200">
                   Start Tracking Free
                   <Icon d={PATHS.arrow} className="w-4 h-4" />
-                </Link>
+                </button>
                 <a href="#features"
                   className="flex items-center justify-center gap-2 bg-white border border-gray-200 text-gray-700 font-semibold px-6 py-3 rounded-xl hover:bg-gray-50 transition-all duration-200">
                   See Features
@@ -437,11 +457,11 @@ export default function Landing() {
               </div>
 
               <Reveal direction="left" delay={400}>
-                <Link to="/register"
+                <button onClick={(e) => goTo(e, '/register')}
                   className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-3 rounded-xl transition-all shadow-lg shadow-indigo-200 hover:-translate-y-0.5 duration-200">
                   Open the App
                   <Icon d={PATHS.arrow} className="w-4 h-4" />
-                </Link>
+                </button>
               </Reveal>
             </div>
 
@@ -518,11 +538,11 @@ export default function Landing() {
             No sign-ups. No subscriptions. Just open the app and start tracking.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
-            <Link to="/register"
+            <button onClick={(e) => goTo(e, '/register')}
               className="flex items-center justify-center gap-2 bg-white text-indigo-700 font-bold px-7 py-3.5 rounded-xl hover:bg-indigo-50 transition-all shadow-xl hover:-translate-y-0.5 duration-200">
               Open Budget Planner
               <Icon d={PATHS.arrow} className="w-4 h-4" />
-            </Link>
+            </button>
             <a href="#features"
               className="flex items-center justify-center gap-2 border border-white/30 text-white font-semibold px-7 py-3.5 rounded-xl hover:bg-white/10 transition-all duration-200">
               Learn More
@@ -548,7 +568,7 @@ export default function Landing() {
               <div className="flex items-center gap-6 text-sm">
                 <a href="#features"     className="hover:text-white transition-colors">Features</a>
                 <a href="#how-it-works" className="hover:text-white transition-colors">How It Works</a>
-                <Link to="/register"    className="hover:text-white transition-colors">Open App</Link>
+                <button onClick={(e) => goTo(e, '/register')} className="hover:text-white transition-colors">Open App</button>
               </div>
             </div>
             <div className="mt-8 pt-8 border-t border-gray-800 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-gray-600">

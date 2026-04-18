@@ -2,6 +2,7 @@ import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
+import { useCurrency, CURRENCIES } from '../context/CurrencyContext';
 
 const links = [
   { to: '/app', label: 'Dashboard', icon: HomeIcon },
@@ -129,6 +130,7 @@ function LogoutConfirmModal({ onConfirm, onCancel }) {
 
 export default function Navbar() {
   const { user, logout } = useAuth();
+  const { currency, setCurrency } = useCurrency();
   const navigate = useNavigate();
   const [dropOpen, setDropOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -207,11 +209,14 @@ export default function Navbar() {
             ))}
           </div>
 
-          {/* Install App button — only shown when browser supports PWA install */}
+          {/* Right side: hamburger on mobile, profile on desktop */}
+          <div className="flex items-center gap-2">
+
+          {/* Install App button — desktop only */}
           {installPrompt && !installed && (
             <button
               onClick={handleInstall}
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-600 border border-indigo-200 hover:bg-indigo-50 transition-colors"
+              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-600 border border-indigo-200 hover:bg-indigo-50 transition-colors"
               title="Install Budget Planner on this device"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -239,8 +244,8 @@ export default function Navbar() {
             )}
           </button>
 
-          {/* User dropdown */}
-          <div className="relative">
+          {/* User dropdown — desktop only */}
+          <div className="relative hidden md:block">
             <button
               onClick={() => setDropOpen(!dropOpen)}
               className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl hover:bg-gray-100 transition-colors"
@@ -267,6 +272,23 @@ export default function Navbar() {
                     <p className="text-sm font-semibold text-gray-900">{user?.name}</p>
                     <p className="text-xs text-gray-400 truncate">{user?.email}</p>
                   </div>
+                  <div className="px-4 py-2.5 border-b border-gray-100" onClick={(e) => e.stopPropagation()}>
+                    <p className="text-xs text-gray-400 mb-1.5 font-medium">Currency</p>
+                    <div className="relative">
+                      <select
+                        value={currency}
+                        onChange={(e) => setCurrency(e.target.value)}
+                        className="w-full appearance-none pl-2.5 pr-7 py-1.5 text-sm font-medium border border-gray-200 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-400 cursor-pointer"
+                      >
+                        {CURRENCIES.map((c) => (
+                          <option key={c.code} value={c.code}>{c.symbol} {c.code} — {c.label}</option>
+                        ))}
+                      </select>
+                      <svg className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </div>
                   <button
                     onClick={() => { setDropOpen(false); setShowLogoutConfirm(true); }}
                     className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors mt-1"
@@ -282,6 +304,7 @@ export default function Navbar() {
             )}
           </div>
 
+          </div>{/* end right-side wrapper */}
         </div>
       </div>
       {/* Mobile menu drawer */}
@@ -310,6 +333,35 @@ export default function Navbar() {
               <p className="text-sm font-semibold text-gray-900">{user?.name}</p>
               <p className="text-xs text-gray-400 truncate">{user?.email}</p>
             </div>
+            <div className="px-3 py-2">
+              <p className="text-xs text-gray-400 mb-1.5 font-medium">Currency</p>
+              <div className="relative">
+                <select
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value)}
+                  className="w-full appearance-none pl-2.5 pr-7 py-1.5 text-sm font-medium border border-gray-200 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-400 cursor-pointer"
+                >
+                  {CURRENCIES.map((c) => (
+                    <option key={c.code} value={c.code}>{c.symbol} {c.code} — {c.label}</option>
+                  ))}
+                </select>
+                <svg className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
+            {installPrompt && !installed && (
+              <button
+                onClick={() => { setMenuOpen(false); handleInstall(); }}
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Install App
+              </button>
+            )}
             <button
               onClick={() => { setMenuOpen(false); setShowLogoutConfirm(true); }}
               className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 rounded-xl transition-colors"

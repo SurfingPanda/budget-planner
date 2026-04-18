@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { getAccounts, createAccount, updateAccount, deleteAccount } from '../api/api';
 import ConfirmDialog from '../components/ConfirmDialog';
+import { useCurrency } from '../context/CurrencyContext';
 
 /* ── account type config ── */
 const ACCOUNT_TYPES = [
@@ -15,10 +16,6 @@ const ACCOUNT_TYPES = [
 ];
 
 const typeConfig = (value) => ACCOUNT_TYPES.find((t) => t.value === value) || ACCOUNT_TYPES[6];
-
-function formatCurrency(n) {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n ?? 0);
-}
 
 /* ── type icon ── */
 function AccountIcon({ type, size = 'md' }) {
@@ -202,6 +199,7 @@ function AccountModal({ account, onClose, onSaved }) {
 
 /* ── Account Card ── */
 function AccountCard({ account, onEdit, onDelete }) {
+  const { formatCurrency } = useCurrency();
   const cfg     = typeConfig(account.type);
   const balance = parseFloat(account.current_balance ?? account.initial_balance);
   const income  = parseFloat(account.income_total  || 0);
@@ -280,6 +278,7 @@ function AccountCard({ account, onEdit, onDelete }) {
 
 /* ══════════════════════════════════════ PAGE ══════════════════════════════════════ */
 export default function Accounts() {
+  const { formatCurrency } = useCurrency();
   const [accounts,      setAccounts]      = useState([]);
   const [loading,       setLoading]       = useState(true);
   const [showModal,     setShowModal]     = useState(false);

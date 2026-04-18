@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { CurrencyProvider } from './context/CurrencyContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
@@ -31,6 +32,7 @@ function AppLayout() {
 export default function App() {
   return (
     <AuthProvider>
+      <CurrencyProvider>
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Landing />} />
@@ -46,6 +48,7 @@ export default function App() {
           />
         </Routes>
       </BrowserRouter>
+      </CurrencyProvider>
     </AuthProvider>
   );
 }

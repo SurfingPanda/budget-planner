@@ -3,12 +3,11 @@
  * All insight logic lives here; Dashboard just passes raw data.
  */
 
-const fmt = (n) =>
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n);
+import { useCurrency } from '../context/CurrencyContext';
 
 /* ── insight generators ─────────────────────────────────────────────────── */
 
-function generateInsights({ summary, prevSummary, categoryData, prevCategoryData, budgets, dailyData }) {
+function generateInsights({ summary, prevSummary, categoryData, prevCategoryData, budgets, dailyData, fmt }) {
   const insights = [];
 
   // 1. Total expense vs last month
@@ -186,7 +185,9 @@ const TYPE_STYLES = {
 /* ── component ──────────────────────────────────────────────────────────── */
 
 export default function InsightsPanel({ summary, prevSummary, categoryData, prevCategoryData, budgets, dailyData }) {
-  const insights = generateInsights({ summary, prevSummary, categoryData, prevCategoryData, budgets, dailyData });
+  const { formatCurrencyInt } = useCurrency();
+  const fmt = formatCurrencyInt;
+  const insights = generateInsights({ summary, prevSummary, categoryData, prevCategoryData, budgets, dailyData, fmt });
 
   // Sort: danger first, then warning, success, info
   const ORDER = { danger: 0, warning: 1, success: 2, info: 3 };

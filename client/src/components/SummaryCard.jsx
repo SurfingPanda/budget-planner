@@ -1,4 +1,7 @@
+import { useCurrency } from '../context/CurrencyContext';
+
 export default function SummaryCard({ title, amount, icon, color, subtitle }) {
+  const { formatCurrency } = useCurrency();
   const bgMap = {
     green:  'bg-green-50 text-green-600',
     red:    'bg-red-50 text-red-600',
@@ -12,9 +15,7 @@ export default function SummaryCard({ title, amount, icon, color, subtitle }) {
     blue:   'text-blue-600',
   };
 
-  const displayAmount = typeof amount === 'number'
-    ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)
-    : amount;
+  const displayAmount = typeof amount === 'number' ? formatCurrency(amount) : amount;
 
   return (
     <div className="card flex items-center gap-3 hover:shadow-md transition-shadow duration-200 p-3 sm:p-5">
