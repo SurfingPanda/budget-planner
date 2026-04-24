@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { getLoans, createLoan, updateLoan, payOffLoan, payMonthLoan, deleteLoan, getAccounts } from '../api/api';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { useCurrency } from '../context/CurrencyContext';
@@ -37,21 +37,40 @@ function getNextPaymentDate(payment_day) {
   return candidate;
 }
 
-function getMonthOptions() {
+function buildMonthOptions(loans = []) {
   const now = new Date();
+  const firstOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  // Earliest = min(start_date across loans, this month)
+  let earliest = firstOfThisMonth;
+  for (const l of loans) {
+    if (!l.start_date) continue;
+    const s = new Date(l.start_date);
+    const sYM = new Date(s.getFullYear(), s.getMonth(), 1);
+    if (sYM < earliest) earliest = sYM;
+  }
+
+  // Latest = max(due_date across loans, 12 months from now)
+  let latest = new Date(now.getFullYear(), now.getMonth() + 11, 1);
+  for (const l of loans) {
+    if (!l.due_date) continue;
+    const d = new Date(l.due_date);
+    const dYM = new Date(d.getFullYear(), d.getMonth(), 1);
+    if (dYM > latest) latest = dYM;
+  }
+
   const months = [];
-  for (let i = 0; i < 12; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+  const cursor = new Date(earliest);
+  while (cursor <= latest) {
     months.push({
-      value: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
-      label: d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
-      short: d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+      value: `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}`,
+      label: cursor.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+      short: cursor.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
     });
+    cursor.setMonth(cursor.getMonth() + 1);
   }
   return months;
 }
-
-const MONTH_OPTIONS = getMonthOptions();
 
 /* ── Modal ── */
 function LoanModal({ loan, onClose, onSaved }) {
@@ -472,14 +491,15 @@ export default function Loans() {
   const [showModal,  setShowModal]  = useState(false);
   const [editLoan,   setEditLoan]   = useState(null);
   const [confirm,    setConfirm]    = useState(null);
-  const [filter,       setFilter]       = useState('active'); // 'all' | 'active' | 'paid_off'
+  const [filter,       setFilter]       = useState('all'); // 'all' | 'active' | 'paid_off'
   const [paymentMonth, setPaymentMonth] = useState(null);    // null | 'YYYY-MM'
+
+  const monthOptions = useMemo(() => buildMonthOptions(loans), [loans]);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const params = filter !== 'all' ? { status: filter } : {};
-      const [loansRes, accountsRes] = await Promise.all([getLoans(params), getAccounts()]);
+      const [loansRes, accountsRes] = await Promise.all([getLoans(), getAccounts()]);
       setLoans(loansRes.data);
       setAccounts(accountsRes.data);
     } catch (e) {
@@ -487,7 +507,7 @@ export default function Loans() {
     } finally {
       setLoading(false);
     }
-  }, [filter]);
+  }, []);
 
   useEffect(() => { load(); }, [load]);
 
@@ -537,28 +557,36 @@ export default function Loans() {
   const totalOwed  = active.filter((l) => l.type === 'borrowed').reduce((s, l) => s + parseFloat(l.remaining_balance), 0);
   const totalLent  = active.filter((l) => l.type === 'lent').reduce((s, l) => s + parseFloat(l.remaining_balance), 0);
 
-  /* month-filtered loans for display */
+  /* status + month filtering for display */
+  const statusFiltered = filter === 'all' ? loans : loans.filter((l) => l.status === filter);
+  const matchesMonth = (l, ym) => {
+    const [selYear, selMonth] = ym.split('-').map(Number);
+    const selDate = new Date(selYear, selMonth - 1, 1);
+    const startDate = l.start_date ? new Date(l.start_date) : null;
+
+    // Recurring loan: active across the month (started by selDate, not yet fully due)
+    if (l.is_recurring && l.payment_day) {
+      if (startDate) {
+        const startYM = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+        if (startYM > selDate) return false;
+      }
+      if (l.due_date) {
+        const due = new Date(l.due_date);
+        const dueYM = new Date(due.getFullYear(), due.getMonth(), 1);
+        if (dueYM < selDate) return false;
+      }
+      return true;
+    }
+
+    // Non-recurring (one-time) loan: show under its start-date month
+    if (startDate) {
+      return startDate.getFullYear() === selYear && startDate.getMonth() + 1 === selMonth;
+    }
+    return false;
+  };
   const displayedLoans = paymentMonth
-    ? loans.filter((l) => {
-        if (!l.is_recurring || !l.payment_day) return false;
-        // Parse selected month as a Date (first day of that month)
-        const [selYear, selMonth] = paymentMonth.split('-').map(Number);
-        const selDate = new Date(selYear, selMonth - 1, 1);
-        // Loan must have started on or before the end of the selected month
-        const startDate = l.start_date ? new Date(l.start_date) : null;
-        if (startDate) {
-          const startYM = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
-          if (startYM > selDate) return false; // loan hasn't started yet this month
-        }
-        // Loan must not be fully due before the selected month
-        if (l.due_date) {
-          const due = new Date(l.due_date);
-          const dueYM = new Date(due.getFullYear(), due.getMonth(), 1);
-          if (dueYM < selDate) return false; // loan already ended
-        }
-        return true;
-      })
-    : loans;
+    ? statusFiltered.filter((l) => matchesMonth(l, paymentMonth))
+    : statusFiltered;
 
   /* monthly due — scoped to selected month when filtered */
   const monthlyDue = paymentMonth
@@ -616,7 +644,7 @@ export default function Loans() {
           <div>
             <p className="text-xs text-gray-400 font-medium">
               {paymentMonth
-                ? `Payments Due · ${MONTH_OPTIONS.find((m) => m.value === paymentMonth)?.label}`
+                ? `Payments Due · ${monthOptions.find((m) => m.value === paymentMonth)?.label}`
                 : 'Monthly Payments Due'}
             </p>
             <p className="text-xl font-bold text-indigo-600">{formatCurrency(monthlyDue)}</p>
@@ -646,21 +674,8 @@ export default function Loans() {
             className="appearance-none pl-3 pr-8 py-1.5 rounded-lg text-sm font-medium border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-violet-500 cursor-pointer"
           >
             <option value="">All Months</option>
-            {MONTH_OPTIONS.map((m) => {
-              const count = loans.filter((l) => {
-                if (!l.is_recurring || !l.payment_day) return false;
-                const [selYear, selMonth] = m.value.split('-').map(Number);
-                const selDate = new Date(selYear, selMonth - 1, 1);
-                if (l.start_date) {
-                  const s = new Date(l.start_date);
-                  if (new Date(s.getFullYear(), s.getMonth(), 1) > selDate) return false;
-                }
-                if (l.due_date) {
-                  const d = new Date(l.due_date);
-                  if (new Date(d.getFullYear(), d.getMonth(), 1) < selDate) return false;
-                }
-                return true;
-              }).length;
+            {monthOptions.map((m) => {
+              const count = loans.filter((l) => matchesMonth(l, m.value)).length;
               return (
                 <option key={m.value} value={m.value}>
                   {m.label}{count > 0 ? ` (${count} payment${count > 1 ? 's' : ''})` : ''}

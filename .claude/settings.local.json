@@ -16,7 +16,11 @@
       "Bash(npm run *)",
       "Bash(mysql -u root -e \"CREATE DATABASE IF NOT EXISTS budget_planner;\")",
       "Bash(mysql -u root budget_planner)",
-      "Bash(node -e ':*)"
+      "Bash(node -e ':*)",
+      "Bash(/c/xampp/mysql/bin/mysql.exe -u root budget_planner -e \"DESCRIBE loans;\")",
+      "Bash(/c/xampp/mysql/bin/mysql.exe -u root budget_planner -e \"SHOW TABLES;\")",
+      "Bash(/c/xampp/mysql/bin/mysql.exe -h monorail.proxy.rlwy.net -P 58869 -u root -pkFYNFhncrDJdjwfYpNyVCtSmvtVQBqGJ railway -e \"DESCRIBE loans;\")",
+      "Bash(/c/xampp/mysql/bin/mysql.exe --default-auth=mysql_native_password -h monorail.proxy.rlwy.net -P 58869 -u root -pkFYNFhncrDJdjwfYpNyVCtSmvtVQBqGJ railway -e \"DESCRIBE loans;\")"
     ]
   }
 }
